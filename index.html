@@ -1,0 +1,392 @@
+<html>
+	<head>
+		<title>Transept de la cathédrale d'Amiens</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			html, body {
+				width: 100%;
+				height: 100%;
+			}
+			body {
+				background-color: #ffffff;
+				margin: 0;
+				overflow: hidden;
+				font-family: arial;
+			}
+			#blocker {
+				position: absolute;
+				width: 100%;
+				height: 100%;
+				background-color: rgba(0,0,0,0.5);
+			}
+			#instructions {
+				width: 100%;
+				height: 100%;
+				display: -webkit-box;
+				display: -moz-box;
+				display: box;
+				-webkit-box-orient: horizontal;
+				-moz-box-orient: horizontal;
+				box-orient: horizontal;
+				-webkit-box-pack: center;
+				-moz-box-pack: center;
+				box-pack: center;
+				-webkit-box-align: center;
+				-moz-box-align: center;
+				box-align: center;
+				color: #ffffff;
+				text-align: center;
+				cursor: pointer;
+			}
+			#msg {
+				width: 100%;
+				height: 100%;
+				display: -webkit-box;
+				display: -moz-box;
+				display: box;
+				-webkit-box-orient: horizontal;
+				-moz-box-orient: horizontal;
+				box-orient: horizontal;
+				-webkit-box-pack: center;
+				-moz-box-pack: center;
+				box-pack: center;
+				-webkit-box-align: center;
+				-moz-box-align: center;
+				box-align: center;
+				color: #ffffff;
+				text-align: center;
+				cursor: pointer;
+			}
+		</style>
+	</head>
+
+	<body>
+		
+		<script src="./Libs/three.min.js"></script>
+		<script src="./Libs/OBJLoader.js"></script>
+		<script src="./Libs/PointerLockControls.js"></script>
+		<div id="blocker">
+
+			<div id="instructions">
+				<span style="font-size:40px">Click to play</span>
+				<br />
+				(Z, Q, S, D = Move, MOUSE = Look around)
+			</div>
+				<div id="msg">
+				<span style="font-size:40px">Le transept sud est un chouette endroit</span>
+				<br />
+			</div>
+
+		</div>
+		<audio id="mainTheme" src="theme.mp3"></audio>
+		<audio id="walk" src="2875.mp3"></audio>
+		<script>
+			var container; 
+			
+			var camera, scene, renderer, neck, targetObject;
+			var vitesse=0.05;
+			var rotationy = 0;
+			var rotationx = 0;
+			var rotationz = 0;
+			
+			var directions = {};
+			directions.forward = false;
+			directions.backward = false;
+			directions.left = false;
+			directions.right = false;
+			var controlsEnabled = false;
+			var theme = document.querySelector('#mainTheme');
+			var walk = document.querySelector('#walk');
+			theme.volume=0.1;
+			var flashlight;
+			
+			var angledroit=degToRad(90);
+			msg.style.display = 'none';
+		var havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
+			if ( havePointerLock ) {
+				var element = document.body;
+				var pointerlockchange = function ( event ) {
+					
+					if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
+						controlsEnabled = true;
+						blocker.style.display = 'none';
+						theme.play();
+						
+					} else {
+						controlsEnabled = false;
+						blocker.style.display = 'block';
+						instructions.style.display = '';
+						theme.pause();
+					}
+				};
+				var pointerlockerror = function ( event ) {
+					instructions.style.display = '';
+					
+				};
+				
+				document.addEventListener( 'pointerlockchange', pointerlockchange, false );
+				document.addEventListener( 'mozpointerlockchange', pointerlockchange, false );
+				document.addEventListener( 'webkitpointerlockchange', pointerlockchange, false );
+				document.addEventListener( 'pointerlockerror', pointerlockerror, false );
+				document.addEventListener( 'mozpointerlockerror', pointerlockerror, false );
+				document.addEventListener( 'webkitpointerlockerror', pointerlockerror, false );
+				instructions.addEventListener( 'click', function ( event ) {
+					// Ask the browser to lock the pointer
+					instructions.style.display = 'none';
+					element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+					element.requestPointerLock();
+				}, false );
+			}
+				else {
+				instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
+			}			
+
+			function onWindowResize() {
+              camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+
+			function Init() {
+		
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 2000 );
+				camera.rotation.x=angledroit;
+               
+				//camera.rotation.order = 'YXZ';
+				
+				// scene
+				scene = new THREE.Scene();
+				
+				
+				
+				neck = new THREE.Object3D();
+				
+								
+				neck.position.z =-20.5;
+				
+				neck.add(camera);
+				scene.add(neck);
+				
+				/*targetObject = new THREE.Object3D();
+				targetObject.position.set(0,-1,-20.5);
+				neck.add(targetObject);*/
+
+				var sphere = new THREE.SphereGeometry( 0.1, 1, 1 );
+				
+				var ambient = new THREE.AmbientLight( 0x111111 );
+				scene.add( ambient );
+				var spotLight = new THREE.PointLight(0xffa500, 1, 20);
+				spotLight.add( new THREE.Mesh( sphere, new THREE.MeshBasicMaterial( { color: 0xff0040 } ) ) );
+				spotLight.power = 500;
+				spotLight.decay=2;
+				spotLight.penumbra = 0.1;
+				///spotLight.position.set(neck.position);
+				camera.add(spotLight);
+				var objet = new THREE.Mesh( sphere, new THREE.MeshBasicMaterial( { color: 0xffa540 } ) );
+				objet.position.set(5.2,0,-19.5);
+				scene.add(objet);
+	
+		
+				
+				//controls
+				
+    
+
+				// texture
+				
+				var manager = new THREE.LoadingManager();
+				manager.onProgress = function ( item, loaded, total ) {
+					console.log( item, loaded, total );
+				};
+
+				var texture = new THREE.Texture();
+
+				var loader = new THREE.ImageLoader( manager );
+				loader.load( './TranseptSud/TranseptTexture4096.jpg', function ( image ) {
+					texture.image = image;
+					texture.needsUpdate = true;
+				} );
+				
+				// Chargement du modèle
+				var loader = new THREE.OBJLoader( manager );
+				loader.load( './TranseptSud/transeptSudBox.obj', function ( object ) {
+					object.traverse( function ( child ) {
+						if ( child instanceof THREE.Mesh ) {
+							child.material.map = texture;
+						}
+					} );
+					scene.add( object );
+				} );
+				
+				renderer = new THREE.WebGLRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+				window.addEventListener( 'resize', onWindowResize, false );
+				window.addEventListener("keydown", onKeyDown, false);
+				window.addEventListener("keyup", onKeyUp, false);
+				window.addEventListener("mousemove", onMouseMove, false);
+
+			}
+			function Afficher() {
+                renderer.render(scene,camera);
+			}
+		
+			function Animer() {
+				requestAnimationFrame(Animer);
+				if(controlsEnabled===true){
+				 neck.rotation.z+=rotationy;
+				
+				camera.rotation.x+=rotationx;
+				//console.log(spotLight.position.x);
+				//console.log(spotLight.target.position);
+				//targetObject.rotation.x+=rotationx;
+				//targetObject.rotation.y+=rotationy
+				rotationx=0;
+				rotationy=0;
+				if(directions.forward) {
+					neck.position.x-=Math.sin(neck.rotation.z)*vitesse;
+					neck.position.y+=Math.cos(neck.rotation.z)*vitesse;
+					walk.play();
+				}
+				if(directions.backward ) {
+					neck.position.x+=Math.sin(neck.rotation.z)*vitesse;
+					neck.position.y-=Math.cos(neck.rotation.z)*vitesse;
+					walk.play();
+				}
+				if(directions.left) {
+					neck.position.x-=Math.sin(neck.rotation.z+angledroit)*vitesse;
+					neck.position.y+=Math.cos(neck.rotation.z+angledroit)*vitesse;
+					walk.play();
+				}
+				if(directions.right ) {
+					neck.position.x+=Math.sin(neck.rotation.z+angledroit)*vitesse;
+					neck.position.y-=Math.cos(neck.rotation.z+angledroit)*vitesse;
+					walk.play();
+				}
+				}
+				test();
+				camera.updateProjectionMatrix ();
+				
+				Afficher();
+				
+			}
+			var message=false;
+			function test()
+			{
+				if(neck.position.y>10.5) {
+					neck.position.y=10.5;
+				}
+				if(neck.position.y<-10.5) {
+					neck.position.y=-10.5;
+				}
+				if(neck.position.x>5.0) {
+					neck.position.x=5.0;
+				}
+				if(neck.position.x<-5.0) {
+					neck.position.x=-5.0 ;
+				}
+				if (camera.rotation.x > degToRad(160) ){
+					camera.rotation.x=degToRad(160);
+					}
+				if (camera.rotation.x <degToRad(20) ){
+					camera.rotation.x=degToRad(20);
+					}
+				if((neck.position.x<=5 && neck.position.x>=4.8  )&&(neck.position.y<=0.3 && neck.position.y>=-0.3)){
+					blocker.style.display = 'block';
+					msg.style.display='';
+					message=true;
+				}
+				else if (message){
+					blocker.style.display = 'none';
+					message=false;
+				}
+			}
+		
+           
+			function onKeyDown(e) {
+				switch(e.keyCode) {
+					case 37: // Left
+					case 81: // Q
+						directions.left = true;
+						
+						break;
+ 
+					case 38: // Up
+					case 90: // Z
+						directions.forward = true;
+						break;
+ 
+					case 39: // Right
+					case 68: // D
+						directions.right = true;
+						break;	
+ 
+					case 40: // Down
+					case 83: // S
+						directions.backward = true;
+						break;
+					}
+					
+					
+				}
+			function onKeyUp(e) {
+				switch(e.keyCode) {
+					case 37: // Left
+					case 81: // Q
+						directions.left = false;
+						walk.pause();
+						break;
+ 
+					case 38: // Up
+					case 90: // Z
+						directions.forward = false;
+						walk.pause();
+						break;
+ 
+					case 39: // Right
+					case 68: // D
+						directions.right = false;
+						walk.pause();
+						break;
+ 
+					case 40: // Down
+					case 83: // S
+						directions.backward = false;
+						walk.pause();
+						break;
+				}
+				
+			}
+	
+			var PI_2 = Math.PI / 2;
+			var PI_2 = Math.PI / 2;
+			function onMouseMove(event) {
+				if ( camera.enabled === false ) return;
+				var movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+				var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+				rotationy= -movementX*0.002;
+				rotationx= -movementY*0.002;
+		
+			}
+			function degToRad(deg){
+				return (Math.PI*deg)/180
+			}
+			function radToDeg(rad)
+			{
+			// return (Math.PI*deg)/180
+			return (rad*180)/Math.PI
+			}
+
+
+	
+			Init();
+			Animer();
+			
+		</script>
+
+	</body>
+</html>
